@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Нет подключения</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #f7f7f7;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    color: #202124;
+    text-align: center;
+    padding: 20px;
+    user-select: none;
+  }
+  h1 {
+    font-size: 24px;
+    font-weight: 400;
+    margin: 0 0 8px;
+  }
+  p {
+    font-size: 15px;
+    color: #5f6368;
+    margin: 0 0 24px;
+    max-width: 420px;
+  }
+  button {
+    padding: 10px 28px;
+    font-size: 14px;
+    font-weight: 500;
+    border: 0;
+    border-radius: 4px;
+    background: #1a73e8;
+    color: #fff;
+    cursor: pointer;
+  }
+  button:hover { background: #1558b0; }
+  button:disabled { opacity: 0.6; cursor: default; }
+  #joke {
+    display: none;
+    margin-top: 20px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #d93025;
+    max-width: 420px;
+  }
+</style>
+</head>
+<body>
+  <h1>Нет подключения к интернету</h1>
+  <p>Проверьте подключение к сети.<br>Попробуйте перезагрузить страницу.</p>
+  <button id="reload">Перезагрузить</button>
+  <div id="joke">Шутка 😄 Это пранк-сайт. Интернет в порядке.</div>
+
+<script>
+  const btn = document.getElementById('reload');
+  const joke = document.getElementById('joke');
+
+  // Визг свиньи через Web Audio API
+  function playPigSqueal() {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    const duration = 1.2; // секунд
+
+    // Основной высокий тон (визг)
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    // Стартуем высоко и "дрожим" вниз-вверх
+    osc.frequency.setValueAtTime(1400, now);
+    osc.frequency.linearRampToValueAtTime(900, now + 0.3);
+    osc.frequency.linearRampToValueAtTime(1600, now + 0.6);
+    osc.frequency.linearRampToValueAtTime(700, now + duration);
+
+    // Быстрая модуляция (дрожание), чтобы было похоже на свинью
+    const lfo = ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(28, now); // 28 Гц — быстрое дрожание
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.setValueAtTime(180, now); // амплитуда дрожания
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+
+    // Формантный фильтр, чтобы звук был "гнусавым"
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1200, now);
+    filter.Q.setValueAtTime(3, now);
+
+    // Огибающая громкости: резкий старт, затухание
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.35, now + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.15, now + 0.5);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    // Шумовой слой (дыхание/хрип)
+    const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.3;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.08, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    // Соединяем
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    noise.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+
+    // Запускаем
+    osc.start(now);
+    osc.stop(now + duration);
+    lfo.start(now);
+    lfo.stop(now + duration);
+    noise.start(now);
+    noise.stop(now + duration);
+  }
+
+  btn.addEventListener('click', () => {
+    playPigSqueal();
+    btn.disabled = true;
+    btn.textContent = 'Перезагрузка...';
+
+    setTimeout(() => {
+      btn.textContent = 'Готово';
+      joke.style.display = 'block';
+    }, 1500);
+  });
+</script>
+</body>
+</html>
